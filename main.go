@@ -65,7 +65,10 @@ func main() {
 			return strconv.Atoi(value)
 		}()
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err) //nolint: errcheck
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"message": err.Error(),
+			})
+			return
 		}
 		visits++
 
@@ -82,19 +85,28 @@ func main() {
 			return time.Parse(time.RFC3339Nano, value)
 		}()
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err) //nolint: errcheck
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"message": err.Error(),
+			})
+			return
 		}
 
 		// Store new visits count
 		err = rdb.Set(ctx, visitsKey, visits, 0).Err()
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err) //nolint: errcheck
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"message": err.Error(),
+			})
+			return
 		}
 
 		// Store current visit date
 		err = rdb.Set(ctx, lastVisitKey, time.Now().Format(time.RFC3339Nano), 0).Err()
 		if err != nil {
-			c.AbortWithError(http.StatusInternalServerError, err) //nolint: errcheck
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"message": err.Error(),
+			})
+			return
 		}
 
 		var message string
