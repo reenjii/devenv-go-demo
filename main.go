@@ -40,6 +40,11 @@ func main() {
 	})
 
 	r := gin.Default()
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": time.Now().Format(time.RFC3339),
+		})
+	})
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
@@ -47,10 +52,7 @@ func main() {
 	})
 
 	r.GET("/redis", func(c *gin.Context) {
-		var (
-			lastVisitKey = "lastvisit"
-			visitsKey    = "visits"
-		)
+		const visitsKey = "visits"
 
 		// Get current visit count
 		visits, err := func() (int, error) {
@@ -70,26 +72,9 @@ func main() {
 			})
 			return
 		}
-		visits++
 
-		// Get last visit date
-		lastVisit, err := func() (time.Time, error) {
-			value, err := rdb.Get(ctx, lastVisitKey).Result()
-			if err != nil {
-				if err == redis.Nil {
-					return time.Time{}, nil
-				}
-				return time.Time{}, err
-			}
-			// Parse last visit
-			return time.Parse(time.RFC3339Nano, value)
-		}()
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-				"message": err.Error(),
-			})
-			return
-		}
+		// Increase visit count
+		visits++
 
 		// Store new visits count
 		err = rdb.Set(ctx, visitsKey, visits, 0).Err()
@@ -100,24 +85,9 @@ func main() {
 			return
 		}
 
-		// Store current visit date
-		err = rdb.Set(ctx, lastVisitKey, time.Now().Format(time.RFC3339Nano), 0).Err()
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-				"message": err.Error(),
-			})
-			return
-		}
-
-		var message string
-		if !lastVisit.IsZero() {
-			message = fmt.Sprintf("Hello visitor #%d! Last visit was at %s", visits, lastVisit.Format(time.RFC3339Nano))
-		} else {
-			message = fmt.Sprintf("Hello visitor #%d! You are the first visitor!", visits)
-		}
-
+		// Response
 		c.JSON(http.StatusOK, gin.H{
-			"message": message,
+			"message": fmt.Sprintf("Hello ! View count: %d", visits),
 		})
 	})
 
